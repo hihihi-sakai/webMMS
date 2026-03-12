@@ -38,13 +38,13 @@ jobs:
 
       - name: Prepare static artifact
         run: |
-          cp dist/webMMS/index.html dist/webMMS/404.html
-          touch dist/webMMS/.nojekyll
+          cp dist/webMMS/browser/index.html dist/webMMS/browser/404.html
+          touch dist/webMMS/browser/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/webMMS
+          path: dist/webMMS/browser
 
   deploy:
     needs: build
