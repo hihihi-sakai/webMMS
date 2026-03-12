@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="112 84 302 262">
+  <!-- Maskable: 背景塗り + セーフゾーン(内側80%)内にコンテンツ -->
+  <rect width="512" height="512" fill="#009f9f"/>
+
+  <!-- 麻雀牌「中」(白地に赤文字): 小さめ -->
+  <rect x="124" y="98" width="110" height="144" rx="12" ry="12" fill="#fff" stroke="#ccc" stroke-width="4"/>
+  <text x="179" y="197" text-anchor="middle" font-family="serif" font-weight="bold" font-size="88" fill="#cc2222">中</text>
+
+  <!-- 右下: スコア集計表 (大きめ) -->
+  <g transform="translate(220, 120)">
+    <rect x="0" y="0" width="186" height="224" rx="20" ry="20" fill="#fff" stroke="#007a7a" stroke-width="6"/>
+    <line x1="8" y1="56" x2="178" y2="56" stroke="#00b3b3" stroke-width="5"/>
+    <line x1="8" y1="112" x2="178" y2="112" stroke="#00b3b3" stroke-width="5"/>
+    <line x1="8" y1="168" x2="178" y2="168" stroke="#00b3b3" stroke-width="5"/>
+    <line x1="93" y1="8" x2="93" y2="216" stroke="#00b3b3" stroke-width="5"/>
+    <text x="46.5" y="46" text-anchor="middle" font-family="sans-serif" font-size="34" fill="#555">+</text>
+    <text x="139.5" y="46" text-anchor="middle" font-family="sans-serif" font-size="34" fill="#555">-</text>
+    <text x="46.5" y="102" text-anchor="middle" font-family="sans-serif" font-size="31" fill="#333">30</text>
+    <text x="139.5" y="102" text-anchor="middle" font-family="sans-serif" font-size="31" fill="#333">8</text>
+    <text x="46.5" y="158" text-anchor="middle" font-family="sans-serif" font-size="31" fill="#333">12</text>
+    <text x="139.5" y="158" text-anchor="middle" font-family="sans-serif" font-size="31" fill="#333">20</text>
+    <text x="46.5" y="211" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="31" fill="#cc2222">42</text>
+    <text x="139.5" y="211" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="31" fill="#cc2222">28</text>
+  </g>
+</svg>

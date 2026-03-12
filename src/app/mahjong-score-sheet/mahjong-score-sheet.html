@@ -1,0 +1,192 @@
+<section
+	class="score-sheet"
+	[class.bg-white]="useFrameStyle()"
+	[class.p-4]="useFrameStyle()"
+	[class.shadow-sm]="useFrameStyle()"
+	[class.sm:p-6]="useFrameStyle()"
+	[class.bg-transparent]="!useFrameStyle()"
+	[class.p-0]="!useFrameStyle()"
+	[class.shadow-none]="!useFrameStyle()"
+	[class.rounded-2xl]="useFrameStyle()"
+	[class.border]="useFrameStyle()"
+	[class.border-emerald-200]="useFrameStyle()"
+>
+@if (useFrameStyle()) {
+	<header class="mb-5 space-y-1" >
+		<h1 class="text-2xl font-bold text-emerald-900">スコア計算</h1>
+		<p class="text-sm text-slate-600">ウマとオカを選択し、試合結果から点数を換算します。</p>
+		<p class="text-sm text-slate-600">点数入力は100点単位です（例: 250 -> 25000点）。</p>
+	</header>
+}
+	<form [formGroup]="form" class="grid gap-6">
+		<section class="grid grid-cols-5 gap-4">
+			<label class="grid gap-2 col-span-1">
+				<span class="text-sm font-medium text-slate-700">ウマ</span>
+				<select formControlName="umaPreset" class="rounded-lg border border-slate-300 px-0 sm:px-3 py-2 text-center">
+					@for (preset of umaPresets; track preset.id) {
+						<option [value]="preset.id">{{ preset.label }}</option>
+					}
+				</select>
+			</label>
+
+			<label class="grid gap-2 col-span-2">
+				<span class="text-sm font-medium text-slate-700">オカ</span>
+				<select formControlName="okaPreset" class="rounded-lg border border-slate-300 px-0 sm:px-3 py-2 text-center">
+					@for (preset of okaPresets; track preset.id) {
+						<option [value]="preset.id">{{ preset.label }}</option>
+					}
+				</select>
+			</label>
+
+			<label class="grid gap-2 col-span-2">
+				<span class="text-sm font-medium text-slate-700">同点処理</span>
+				<select formControlName="tieMode" class="rounded-lg border border-slate-300 px-0 sm:px-3 py-2 text-center">
+					@for (preset of tieModePresets; track preset.id) {
+						<option [value]="preset.id">{{ preset.label }}</option>
+					}
+				</select>
+			</label>
+		</section>
+
+		<section>
+			<table class="entry-table w-full border-collapse text-sm">
+				<colgroup>
+					<col class="entry-col-seat" />
+					<col class="entry-col-player" />
+					<col class="entry-col-score" />
+				</colgroup>
+				<thead>
+					<tr class="border-b border-slate-200 text-left text-slate-700">
+						<th class="px-2 py-2 font-medium text-center">座席</th>
+						<th class="px-2 py-2 font-medium text-center">プレーヤー</th>
+						<th class="px-2 py-2 text-center font-medium">点数</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr class="border-b border-slate-100">
+						<th class="px-2 py-2 font-medium text-slate-700">東家</th>
+						<td class="px-2 py-2">
+							<select formControlName="player1Id" (change)="onPlayerSeatChange(1, $event)" aria-label="東家のプレーヤー選択" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+								@for (player of registeredPlayers(); track player.id) {
+									<option [value]="player.id">
+										{{ player.name }}
+									</option>
+								}
+							</select>
+						</td>
+						<td class="px-2 py-2">
+							<div class="flex items-center justify-end gap-2">
+								<input type="number" formControlName="p1" step="1" [class.border-rose-400]="!isTotalValid()" [class.border-slate-300]="isTotalValid()" class="w-20 rounded-lg border px-2 py-2 text-right" aria-label="東家の点数" />
+								<span class="text-sm text-slate-500">00</span>
+							</div>
+						</td>
+					</tr>
+					<tr class="border-b border-slate-100">
+						<th class="px-2 py-2 font-medium text-slate-700">南家</th>
+						<td class="px-2 py-2">
+							<select formControlName="player2Id" (change)="onPlayerSeatChange(2, $event)" aria-label="南家のプレーヤー選択" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+								@for (player of registeredPlayers(); track player.id) {
+									<option [value]="player.id">
+										{{ player.name }}
+									</option>
+								}
+							</select>
+						</td>
+						<td class="px-2 py-2">
+							<div class="flex items-center justify-end gap-2">
+								<input type="number" formControlName="p2" step="1" [class.border-rose-400]="!isTotalValid()" [class.border-slate-300]="isTotalValid()" class="w-20 rounded-lg border px-2 py-2 text-right" aria-label="南家の点数" />
+								<span class="text-sm text-slate-500">00</span>
+							</div>
+						</td>
+					</tr>
+					<tr class="border-b border-slate-100">
+						<th class="px-2 py-2 font-medium text-slate-700">西家</th>
+						<td class="px-2 py-2">
+							<select formControlName="player3Id" (change)="onPlayerSeatChange(3, $event)" aria-label="西家のプレーヤー選択" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+								@for (player of registeredPlayers(); track player.id) {
+									<option [value]="player.id">
+										{{ player.name }}
+									</option>
+								}
+							</select>
+						</td>
+						<td class="px-2 py-2">
+							<div class="flex items-center justify-end gap-2">
+								<input type="number" formControlName="p3" step="1" [class.border-rose-400]="!isTotalValid()" [class.border-slate-300]="isTotalValid()" class="w-20 rounded-lg border px-2 py-2 text-right" aria-label="西家の点数" />
+								<span class="text-sm text-slate-500">00</span>
+							</div>
+						</td>
+					</tr>
+					<tr>
+						<th class="px-2 py-2 font-medium text-slate-700">北家</th>
+						<td class="px-2 py-2">
+							<select formControlName="player4Id" (change)="onPlayerSeatChange(4, $event)" aria-label="北家のプレーヤー選択" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+								@for (player of registeredPlayers(); track player.id) {
+									<option [value]="player.id">
+										{{ player.name }}
+									</option>
+								}
+							</select>
+						</td>
+						<td class="px-2 py-2">
+							<div class="flex items-center justify-end gap-2">
+								<input type="number" formControlName="p4" step="1" [class.border-rose-400]="!isTotalValid()" [class.border-slate-300]="isTotalValid()" class="w-20 rounded-lg border px-2 py-2 text-right" aria-label="北家の点数" />
+								<span class="text-sm text-slate-500">00</span>
+							</div>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</section>
+	</form>
+
+	<p class="mt-4 text-sm" [class.text-emerald-700]="isTotalValid()" [class.text-rose-700]="!isTotalValid()">
+		合計点: {{ totalScore() }}
+		@if (!isTotalValid()) {
+			<span class="ml-2">(100000点になるように調整してください)</span>
+		}
+	</p>
+
+	<p class="mt-2 text-sm text-slate-600">
+		換算式: {{ startPoint }}点持ち{{ returnPoint() }}点返し / ウマ {{ selectedUma().label }}
+	</p>
+	<p class="mt-1 text-sm text-slate-600">小数処理: 五捨六入、端数調整はトップに上乗せ</p>
+
+	<section class="mt-6">
+		<table class="score-table w-full border-collapse text-xs sm:text-sm">
+			<colgroup>
+				<col class="col-rank" />
+				<col class="col-player" />
+				<col class="col-score" />
+				<col class="col-small" />
+				<col class="col-small" />
+				<col class="col-small" />
+				<col class="col-total" />
+			</colgroup>
+			<thead>
+				<tr class="border-b border-slate-200 text-left text-slate-700">
+					<th class="px-1 py-1 sm:px-2 sm:py-2"><span class="inline sm:hidden">順</span><span class="hidden sm:inline">順位</span></th>
+					<th class="px-1 py-1 sm:px-2 sm:py-2"><span class="inline sm:hidden">プレーヤー</span><span class="hidden sm:inline">プレーヤー</span></th>
+					<th class="px-1 py-1 text-right sm:px-2 sm:py-2"><span class="inline sm:hidden">点数</span><span class="hidden sm:inline">点数</span></th>
+					<th class="px-1 py-1 text-right sm:px-2 sm:py-2"><span class="inline sm:hidden">素</span><span class="hidden sm:inline">素点</span></th>
+					<th class="px-1 py-1 text-right sm:px-2 sm:py-2"><span class="inline sm:hidden">ウ</span><span class="hidden sm:inline">ウマ</span></th>
+					<th class="px-1 py-1 text-right sm:px-2 sm:py-2"><span class="inline sm:hidden">オ</span><span class="hidden sm:inline">オカ</span></th>
+					<th class="px-1 py-1 text-right sm:px-2 sm:py-2"><span class="inline sm:hidden">計</span><span class="hidden sm:inline">合計</span></th>
+				</tr>
+			</thead>
+			<tbody>
+				@for (result of results(); track result.name) {
+					<tr class="border-b border-slate-100">
+						<td class="px-1 py-1 font-semibold text-slate-800 sm:px-2 sm:py-2">{{ result.rank }}位</td>
+						<td class="px-1 py-1 sm:px-2 sm:py-2"><span class="name-text" [title]="result.name">{{ result.name }}</span></td>
+						<td class="px-1 py-1 text-right font-mono sm:px-2 sm:py-2">{{ result.score }}</td>
+						<td class="px-1 py-1 text-right font-mono sm:px-2 sm:py-2">{{ formatBasePoint(result.base) }}</td>
+						<td class="px-1 py-1 text-right font-mono sm:px-2 sm:py-2">{{ formatPoint(result.uma) }}</td>
+						<td class="px-1 py-1 text-right font-mono sm:px-2 sm:py-2">{{ formatPoint(result.oka) }}</td>
+						<td class="px-1 py-1 text-right font-mono font-semibold sm:px-2 sm:py-2">{{ formatPoint(result.total) }}</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</section>
+</section>

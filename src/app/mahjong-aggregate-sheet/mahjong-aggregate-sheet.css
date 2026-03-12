@@ -1,0 +1,18 @@
+:host {
+  display: block;
+}
+
+.accordion-chevron {
+  transition: transform 160ms ease;
+}
+
+.player-editor-accordion[open] .accordion-chevron {
+  transform: rotate(180deg);
+}
+
+input:focus,
+select:focus,
+button:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}

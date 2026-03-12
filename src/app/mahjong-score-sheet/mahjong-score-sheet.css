@@ -1,0 +1,59 @@
+:host {
+	display: block;
+}
+
+.entry-table {
+	table-layout: fixed;
+	width: 100%;
+}
+
+.entry-table .entry-col-seat {
+	width: 4.5em;
+}
+
+.entry-table .entry-col-player {
+	width: auto;
+}
+
+.entry-table .entry-col-score {
+	width: 8.5em;
+}
+
+.score-table {
+	table-layout: fixed;
+	width: 100%;
+}
+
+.score-table .col-rank {
+	width: 2.5em;
+}
+
+.score-table .col-player {
+	width: 7em;
+}
+
+.score-table .col-score {
+	width: 7ch;
+}
+
+.score-table .col-small {
+	width: 4ch;
+}
+
+.score-table .col-total {
+	width: 5ch;
+}
+
+.name-text {
+	display: inline-block;
+	max-width: 7em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+input:focus,
+select:focus {
+	outline: 2px solid #10b981;
+	outline-offset: 2px;
+}
