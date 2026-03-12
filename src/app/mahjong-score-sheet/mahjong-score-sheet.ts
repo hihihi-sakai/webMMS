@@ -79,9 +79,9 @@ export class MahjongScoreSheet {
   ];
 
   protected readonly okaPresets: OkaPreset[] = [
-    { id: '20', label: '20 (返し点 30000)', returnPoint: 30000 },
-    { id: '10', label: '10 (返し点 27500)', returnPoint: 27500 },
-    { id: '0', label: 'なし (返し点 25000)', returnPoint: 25000 }
+    { id: '20', label: '20', returnPoint: 30000 },
+    { id: '10', label: '10', returnPoint: 27500 },
+    { id: '0', label: 'なし', returnPoint: 25000 }
   ];
 
   protected readonly tieModePresets: TieModePreset[] = [
