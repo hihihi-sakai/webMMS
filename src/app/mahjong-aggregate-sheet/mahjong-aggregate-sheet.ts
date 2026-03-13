@@ -162,7 +162,7 @@ export class MahjongAggregateSheet {
       ...current,
       {
         id: `p${playerNumber}`,
-        name: `プレイヤー${playerNumber}`
+        name: `プレーヤー${playerNumber}`
       }
     ]);
   }
@@ -431,10 +431,10 @@ export class MahjongAggregateSheet {
 
   private createDefaultPlayers(): RegisteredPlayer[] {
     return [
-      { id: 'p1', name: 'プレイヤー1' },
-      { id: 'p2', name: 'プレイヤー2' },
-      { id: 'p3', name: 'プレイヤー3' },
-      { id: 'p4', name: 'プレイヤー4' }
+      { id: 'p1', name: 'プレーヤー1' },
+      { id: 'p2', name: 'プレーヤー2' },
+      { id: 'p3', name: 'プレーヤー3' },
+      { id: 'p4', name: 'プレーヤー4' }
     ];
   }
 

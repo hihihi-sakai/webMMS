@@ -1,5 +1,20 @@
 # WebMMS
 
+**WebMMS（Web麻雀スコア管理システム）** は、麻雀の対局結果を記録・集計するWebアプリケーションです。
+
+## 主な機能
+
+- **スコアシート** — 半荘1回分の点数を4名分入力し、ウマ・オカを含めた最終スコアを自動計算します。
+- **集計シート** — 最大8名のプレーヤーを登録し、半荘ごとに4名を選んで結果を蓄積。通算ポイント・平均・収支を一覧で確認できます。
+- **データ永続化** — 入力したプレーヤー情報と対局履歴はブラウザの `localStorage` に自動保存されます。
+- **PWA対応** — オフライン環境でも利用できます。
+
+## 動作環境
+
+モダンブラウザ（Chrome / Edge / Safari / Firefox 最新版）で動作します。
+
+---
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.1.
 
 ## Development server

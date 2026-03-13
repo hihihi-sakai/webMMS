@@ -97,10 +97,10 @@ export class MahjongScoreSheet {
   readonly useFrameStyle = input(true);
   readonly resetToken = input(0);
   readonly playerSyncToken = input(0);
-  readonly player1 = input('プレイヤー1');
-  readonly player2 = input('プレイヤー2');
-  readonly player3 = input('プレイヤー3');
-  readonly player4 = input('プレイヤー4');
+  readonly player1 = input('プレーヤー1');
+  readonly player2 = input('プレーヤー2');
+  readonly player3 = input('プレーヤー3');
+  readonly player4 = input('プレーヤー4');
 
   protected readonly selectedPlayerIds = computed<[string, string, string, string]>(() => {
     const value = this.values();
@@ -111,19 +111,19 @@ export class MahjongScoreSheet {
     () => {
       if (this.registeredPlayers().length < 4) {
         return [
-          this.normalizePlayerName(this.player1(), 'プレイヤー1'),
-          this.normalizePlayerName(this.player2(), 'プレイヤー2'),
-          this.normalizePlayerName(this.player3(), 'プレイヤー3'),
-          this.normalizePlayerName(this.player4(), 'プレイヤー4')
+          this.normalizePlayerName(this.player1(), 'プレーヤー1'),
+          this.normalizePlayerName(this.player2(), 'プレーヤー2'),
+          this.normalizePlayerName(this.player3(), 'プレーヤー3'),
+          this.normalizePlayerName(this.player4(), 'プレーヤー4')
         ];
       }
 
       const [player1Id, player2Id, player3Id, player4Id] = this.selectedPlayerIds();
       return [
-        this.getRegisteredPlayerNameById(player1Id, 'プレイヤー1'),
-        this.getRegisteredPlayerNameById(player2Id, 'プレイヤー2'),
-        this.getRegisteredPlayerNameById(player3Id, 'プレイヤー3'),
-        this.getRegisteredPlayerNameById(player4Id, 'プレイヤー4')
+        this.getRegisteredPlayerNameById(player1Id, 'プレーヤー1'),
+        this.getRegisteredPlayerNameById(player2Id, 'プレーヤー2'),
+        this.getRegisteredPlayerNameById(player3Id, 'プレーヤー3'),
+        this.getRegisteredPlayerNameById(player4Id, 'プレーヤー4')
       ];
     }
   );
@@ -544,10 +544,10 @@ export class MahjongScoreSheet {
 
   private createDefaultPlayers(): RegisteredPlayer[] {
     return [
-      { id: 'p1', name: 'プレイヤー1' },
-      { id: 'p2', name: 'プレイヤー2' },
-      { id: 'p3', name: 'プレイヤー3' },
-      { id: 'p4', name: 'プレイヤー4' }
+      { id: 'p1', name: 'プレーヤー1' },
+      { id: 'p2', name: 'プレーヤー2' },
+      { id: 'p3', name: 'プレーヤー3' },
+      { id: 'p4', name: 'プレーヤー4' }
     ];
   }
 
