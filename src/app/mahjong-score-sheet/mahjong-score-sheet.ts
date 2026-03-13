@@ -97,6 +97,7 @@ export class MahjongScoreSheet {
   readonly useFrameStyle = input(true);
   readonly resetToken = input(0);
   readonly playerSyncToken = input(0);
+  readonly registeredPlayersInput = input<RegisteredPlayer[]>([]);
   readonly player1 = input('プレーヤー1');
   readonly player2 = input('プレーヤー2');
   readonly player3 = input('プレーヤー3');
@@ -355,7 +356,10 @@ export class MahjongScoreSheet {
 
     effect(() => {
       this.playerSyncToken();
-      const refreshedPlayers = this.loadPlayersFromStorage();
+      const inputPlayers = this.registeredPlayersInput();
+      const refreshedPlayers = inputPlayers.length >= 4
+        ? inputPlayers
+        : this.loadPlayersFromStorage();
       this.registeredPlayers.set(refreshedPlayers);
 
       const defaults = this.createDefaultPlayerSelection(

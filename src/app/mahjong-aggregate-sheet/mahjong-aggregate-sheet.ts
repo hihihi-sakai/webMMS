@@ -46,8 +46,7 @@ type AggregateRow = {
 })
 export class MahjongAggregateSheet {
   private static readonly MAX_PLAYERS = 8;
-  private static readonly PLAYER_STORAGE_KEY = 'mahjong-aggregate-players';
-  private static readonly RECORDS_STORAGE_KEY = 'mahjong-aggregate-records';
+  private static readonly STORAGE_KEY = 'mahjong-aggregate-data';
 
   private readonly confirmDialog = viewChild.required(ConfirmDialog);
 
@@ -135,11 +134,7 @@ export class MahjongAggregateSheet {
 
   public constructor() {
     effect(() => {
-      this.savePlayersToStorage(this.players());
-    });
-
-    effect(() => {
-      this.saveRecordsToStorage(this.records());
+      this.saveToStorage(this.players(), this.records());
     });
 
     effect(() => {
@@ -206,6 +201,25 @@ export class MahjongAggregateSheet {
     this.updatePlayerName(playerId, target.value);
   }
 
+  protected onPlayerNameBlur(playerId: string, event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    if (!this.playerNameErrors().has(playerId)) {
+      return;
+    }
+
+    const currentPlayer = this.players().find((player) => player.id === playerId);
+    target.value = currentPlayer?.name ?? '';
+    this.playerNameErrors.update((errors) => {
+      const next = new Map(errors);
+      next.delete(playerId);
+      return next;
+    });
+  }
+
   protected addRecord(): void {
     if (!this.canAddRecord()) {
       return;
@@ -261,6 +275,28 @@ export class MahjongAggregateSheet {
 
   protected formatPoint(value: number): string {
     return Number.isInteger(value) ? `${value}` : value.toFixed(1);
+  }
+
+  protected async initializePlayers(): Promise<void> {
+    const confirmed = await this.confirmDialog().open({
+      title: 'プレーヤー初期化',
+      message: 'プレーヤーを初期の4名に戻し、全ての半荘履歴も削除します。この操作は取り消せません。',
+      confirmLabel: '初期化'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    const localStorageRef = this.getLocalStorage();
+    if (localStorageRef) {
+      localStorageRef.removeItem(MahjongAggregateSheet.STORAGE_KEY);
+    }
+
+    this.players.set(this.createDefaultPlayers());
+    this.records.set([]);
+    this.nextRecordId = 1;
+    this.playerNameErrors.set(new Map());
+    this.scoreSheetResetToken.update((value) => value + 1);
   }
 
   protected async clearRecords(): Promise<void> {
@@ -320,10 +356,12 @@ export class MahjongAggregateSheet {
     }
 
     try {
-      const raw = localStorageRef.getItem(MahjongAggregateSheet.RECORDS_STORAGE_KEY);
+      const raw = localStorageRef.getItem(MahjongAggregateSheet.STORAGE_KEY);
       if (!raw) return [];
 
-      const parsed = JSON.parse(raw) as unknown;
+      const data = JSON.parse(raw) as unknown;
+      if (typeof data !== 'object' || data === null) return [];
+      const parsed = (data as Record<string, unknown>)['records'];
       if (!Array.isArray(parsed)) return [];
 
       const restored: HalfGameRecord[] = [];
@@ -347,13 +385,13 @@ export class MahjongAggregateSheet {
     }
   }
 
-  private saveRecordsToStorage(records: HalfGameRecord[]): void {
+  private saveToStorage(players: RegisteredPlayer[], records: HalfGameRecord[]): void {
     const localStorageRef = this.getLocalStorage();
     if (!localStorageRef) return;
     try {
       localStorageRef.setItem(
-        MahjongAggregateSheet.RECORDS_STORAGE_KEY,
-        JSON.stringify(records)
+        MahjongAggregateSheet.STORAGE_KEY,
+        JSON.stringify({ players, records })
       );
     } catch {
       // Ignore write failures.
@@ -367,12 +405,16 @@ export class MahjongAggregateSheet {
     }
 
     try {
-      const raw = localStorageRef.getItem(MahjongAggregateSheet.PLAYER_STORAGE_KEY);
+      const raw = localStorageRef.getItem(MahjongAggregateSheet.STORAGE_KEY);
       if (!raw) {
         return this.createDefaultPlayers();
       }
 
-      const parsed = JSON.parse(raw) as unknown;
+      const data = JSON.parse(raw) as unknown;
+      if (typeof data !== 'object' || data === null) {
+        return this.createDefaultPlayers();
+      }
+      const parsed = (data as Record<string, unknown>)['players'];
       if (!Array.isArray(parsed)) {
         return this.createDefaultPlayers();
       }
@@ -410,22 +452,6 @@ export class MahjongAggregateSheet {
       return uniquePlayers;
     } catch {
       return this.createDefaultPlayers();
-    }
-  }
-
-  private savePlayersToStorage(players: RegisteredPlayer[]): void {
-    const localStorageRef = this.getLocalStorage();
-    if (!localStorageRef) {
-      return;
-    }
-
-    try {
-      localStorageRef.setItem(
-        MahjongAggregateSheet.PLAYER_STORAGE_KEY,
-        JSON.stringify(players)
-      );
-    } catch {
-      // Ignore write failures.
     }
   }
 
