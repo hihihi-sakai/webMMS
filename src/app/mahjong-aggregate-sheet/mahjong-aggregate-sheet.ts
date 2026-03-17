@@ -123,13 +123,39 @@ export class MahjongAggregateSheet {
 
     const pointValue = this.selectedPointValue();
     const moneyPerPoint = this.pointValueMap.get(pointValue) ?? 10;
-    return [...playerMap.values()]
+    const rankedRows = [...playerMap.values()]
       .map((row) => ({
         ...row,
         average: row.games > 0 ? row.total / row.games : 0,
-        finalRevenue: row.total * moneyPerPoint
+        finalRevenue: 0
       }))
       .sort((a, b) => b.total - a.total);
+
+    if (rankedRows.length === 0) {
+      return rankedRows;
+    }
+
+    const roundedRows = rankedRows.map((row, index) => {
+      if (index === rankedRows.length - 1) {
+        return row;
+      }
+
+      return {
+        ...row,
+        finalRevenue: this.roundToHundredByGoshaRokunyu(row.total * moneyPerPoint)
+      };
+    });
+
+    const sumWithoutLast = roundedRows
+      .slice(0, -1)
+      .reduce((sum, row) => sum + row.finalRevenue, 0);
+    const lastIndex = roundedRows.length - 1;
+    roundedRows[lastIndex] = {
+      ...roundedRows[lastIndex],
+      finalRevenue: -sumWithoutLast
+    };
+
+    return roundedRows;
   });
 
   public constructor() {
@@ -478,6 +504,16 @@ export class MahjongAggregateSheet {
   private playerIdToNumber(id: string): number {
     const parsed = Number.parseInt(id.replace('p', ''), 10);
     return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private roundToHundredByGoshaRokunyu(value: number): number {
+    const sign = Math.sign(value);
+    const absolute = Math.abs(value);
+    const lowerHundred = Math.floor(absolute / 100) * 100;
+    const remainder = absolute - lowerHundred;
+    const rounded = remainder >= 60 ? lowerHundred + 100 : lowerHundred;
+
+    return sign * rounded;
   }
 
   private getLocalStorage(): Storage | null {
