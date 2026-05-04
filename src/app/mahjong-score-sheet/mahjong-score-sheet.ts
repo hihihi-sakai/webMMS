@@ -5,7 +5,7 @@ import {
   effect,
   signal,
   input,
-  output
+  output,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -53,12 +53,20 @@ type SavedSettings = {
   tieMode: string;
 };
 
+type ParsedScoreInputs = {
+  p1: number;
+  p2: number;
+  p3: number;
+  p4: number;
+  isValid: boolean;
+};
+
 @Component({
   selector: 'app-mahjong-score-sheet',
   imports: [ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './mahjong-score-sheet.html',
-  styleUrl: './mahjong-score-sheet.css'
+  styleUrl: './mahjong-score-sheet.css',
 })
 export class MahjongScoreSheet {
   private static readonly START_POINT = 25000;
@@ -67,6 +75,7 @@ export class MahjongScoreSheet {
   private static readonly SETTINGS_STORAGE_KEY = 'mahjong-score-sheet-settings';
   private static readonly PLAYER_STORAGE_KEY = 'mahjong-aggregate-players';
   private static readonly MAX_PLAYERS = 8;
+  private static readonly SIGNED_INTEGER_PATTERN = /^-?\d+$/;
   private lastResetToken: number | null = null;
   private lastSelectedPlayerIds: [string, string, string, string] = ['', '', '', ''];
   protected readonly startPoint = MahjongScoreSheet.START_POINT;
@@ -75,18 +84,18 @@ export class MahjongScoreSheet {
   protected readonly umaPresets: UmaPreset[] = [
     { id: '10-20', label: '10-20', values: [20, 10, -10, -20] },
     { id: '5-10', label: '5-10', values: [10, 5, -5, -10] },
-    { id: 'none', label: 'なし', values: [0, 0, 0, 0] }
+    { id: 'none', label: 'なし', values: [0, 0, 0, 0] },
   ];
 
   protected readonly okaPresets: OkaPreset[] = [
     { id: '20', label: '20', returnPoint: 30000 },
     { id: '10', label: '10', returnPoint: 27500 },
-    { id: '0', label: 'なし', returnPoint: 25000 }
+    { id: '0', label: 'なし', returnPoint: 25000 },
   ];
 
   protected readonly tieModePresets: TieModePreset[] = [
     { id: 'dealer-priority', label: '起家優先' },
-    { id: 'split', label: '折半' }
+    { id: 'split', label: '折半' },
   ];
 
   protected readonly form;
@@ -108,64 +117,86 @@ export class MahjongScoreSheet {
     return [value.player1Id, value.player2Id, value.player3Id, value.player4Id];
   });
 
-  protected readonly playerNames = computed<[string, string, string, string]>(
-    () => {
-      if (this.registeredPlayers().length < 4) {
-        return [
-          this.normalizePlayerName(this.player1(), 'プレーヤー1'),
-          this.normalizePlayerName(this.player2(), 'プレーヤー2'),
-          this.normalizePlayerName(this.player3(), 'プレーヤー3'),
-          this.normalizePlayerName(this.player4(), 'プレーヤー4')
-        ];
-      }
-
-      const [player1Id, player2Id, player3Id, player4Id] = this.selectedPlayerIds();
+  protected readonly playerNames = computed<[string, string, string, string]>(() => {
+    if (this.registeredPlayers().length < 4) {
       return [
-        this.getRegisteredPlayerNameById(player1Id, 'プレーヤー1'),
-        this.getRegisteredPlayerNameById(player2Id, 'プレーヤー2'),
-        this.getRegisteredPlayerNameById(player3Id, 'プレーヤー3'),
-        this.getRegisteredPlayerNameById(player4Id, 'プレーヤー4')
+        this.normalizePlayerName(this.player1(), 'プレーヤー1'),
+        this.normalizePlayerName(this.player2(), 'プレーヤー2'),
+        this.normalizePlayerName(this.player3(), 'プレーヤー3'),
+        this.normalizePlayerName(this.player4(), 'プレーヤー4'),
       ];
     }
-  );
 
-  protected readonly totalScore = computed(() => {
-    const value = this.values();
-    return (value.p1 + value.p2 + value.p3 + value.p4) * MahjongScoreSheet.INPUT_UNIT;
+    const [player1Id, player2Id, player3Id, player4Id] = this.selectedPlayerIds();
+    return [
+      this.getRegisteredPlayerNameById(player1Id, 'プレーヤー1'),
+      this.getRegisteredPlayerNameById(player2Id, 'プレーヤー2'),
+      this.getRegisteredPlayerNameById(player3Id, 'プレーヤー3'),
+      this.getRegisteredPlayerNameById(player4Id, 'プレーヤー4'),
+    ];
   });
 
-  protected readonly isTotalValid = computed(() => this.totalScore() === 100000);
+  protected readonly totalScore = computed(() => {
+    const scoreInputs = this.parsedScoreInputs();
+    if (!scoreInputs.isValid) {
+      return 0;
+    }
+
+    return (
+      (scoreInputs.p1 + scoreInputs.p2 + scoreInputs.p3 + scoreInputs.p4) *
+      MahjongScoreSheet.INPUT_UNIT
+    );
+  });
+
+  protected readonly isTotalValid = computed(
+    () => this.parsedScoreInputs().isValid && this.totalScore() === 100000,
+  );
 
   protected readonly selectedOka = computed(
     () =>
-      this.okaPresets.find((preset) => preset.id === this.values().okaPreset) ??
-      this.okaPresets[0]
+      this.okaPresets.find((preset) => preset.id === this.values().okaPreset) ?? this.okaPresets[0],
   );
 
   protected readonly selectedUma = computed(
     () =>
-      this.umaPresets.find((preset) => preset.id === this.values().umaPreset) ??
-      this.umaPresets[0]
+      this.umaPresets.find((preset) => preset.id === this.values().umaPreset) ?? this.umaPresets[0],
   );
 
   protected readonly selectedTieMode = computed(
     () =>
       this.tieModePresets.find((preset) => preset.id === this.values().tieMode) ??
-      this.tieModePresets[0]
+      this.tieModePresets[0],
   );
 
   protected readonly returnPoint = computed(() => this.selectedOka().returnPoint);
 
-  protected readonly okaValue = computed(() =>
-    (this.selectedOka().returnPoint - MahjongScoreSheet.START_POINT) * 4 / 1000
+  protected readonly okaValue = computed(
+    () => ((this.selectedOka().returnPoint - MahjongScoreSheet.START_POINT) * 4) / 1000,
   );
 
   protected readonly convertedTotal = computed(() =>
-    this.results().reduce((sum, result) => sum + result.total, 0)
+    this.results().reduce((sum, result) => sum + result.total, 0),
   );
+
+  protected readonly parsedScoreInputs = computed<ParsedScoreInputs>(() => {
+    const value = this.values();
+    const p1 = this.parseSignedInteger(value.p1);
+    const p2 = this.parseSignedInteger(value.p2);
+    const p3 = this.parseSignedInteger(value.p3);
+    const p4 = this.parseSignedInteger(value.p4);
+
+    return {
+      p1: p1 ?? 0,
+      p2: p2 ?? 0,
+      p3: p3 ?? 0,
+      p4: p4 ?? 0,
+      isValid: p1 !== null && p2 !== null && p3 !== null && p4 !== null,
+    };
+  });
 
   protected readonly results = computed<PlayerResult[]>(() => {
     const value = this.values();
+    const scoreInputs = this.parsedScoreInputs();
     const selectedUma = this.selectedUma();
     const selectedOka = this.selectedOka();
 
@@ -174,26 +205,26 @@ export class MahjongScoreSheet {
         seat: 1 as const,
         playerId: value.player1Id,
         name: this.playerNames()[0],
-        score: value.p1 * MahjongScoreSheet.INPUT_UNIT
+        score: scoreInputs.p1 * MahjongScoreSheet.INPUT_UNIT,
       },
       {
         seat: 2 as const,
         playerId: value.player2Id,
         name: this.playerNames()[1],
-        score: value.p2 * MahjongScoreSheet.INPUT_UNIT
+        score: scoreInputs.p2 * MahjongScoreSheet.INPUT_UNIT,
       },
       {
         seat: 3 as const,
         playerId: value.player3Id,
         name: this.playerNames()[2],
-        score: value.p3 * MahjongScoreSheet.INPUT_UNIT
+        score: scoreInputs.p3 * MahjongScoreSheet.INPUT_UNIT,
       },
       {
         seat: 4 as const,
         playerId: value.player4Id,
         name: this.playerNames()[3],
-        score: value.p4 * MahjongScoreSheet.INPUT_UNIT
-      }
+        score: scoreInputs.p4 * MahjongScoreSheet.INPUT_UNIT,
+      },
     ];
 
     const ranked = [...players]
@@ -220,7 +251,7 @@ export class MahjongScoreSheet {
           uma,
           oka,
           total: this.roundByGoshaRokunyu(rawTotal),
-          sortIndex: rankIndex
+          sortIndex: rankIndex,
         });
       });
     } else {
@@ -260,7 +291,7 @@ export class MahjongScoreSheet {
             uma: sharedUma,
             oka: sharedOka,
             total: this.roundByGoshaRokunyu(rawTotal),
-            sortIndex: cursor + indexInGroup
+            sortIndex: cursor + indexInGroup,
           });
         });
 
@@ -274,7 +305,7 @@ export class MahjongScoreSheet {
     return provisional
       .map((result) => ({
         ...result,
-        total: result.sortIndex === 0 ? result.total + carryToTop : result.total
+        total: result.sortIndex === 0 ? result.total + carryToTop : result.total,
       }))
       .sort((a, b) => a.rank - b.rank || a.sortIndex - b.sortIndex)
       .map(({ sortIndex, ...result }) => result);
@@ -283,7 +314,7 @@ export class MahjongScoreSheet {
   public constructor(private readonly fb: FormBuilder) {
     const savedSettings = this.loadSavedSettings();
     const defaultPlayerSelection = this.createDefaultPlayerSelection(
-      this.registeredPlayers().map((player) => player.id)
+      this.registeredPlayers().map((player) => player.id),
     );
 
     this.form = this.fb.nonNullable.group({
@@ -294,10 +325,22 @@ export class MahjongScoreSheet {
       player2Id: [defaultPlayerSelection[1]],
       player3Id: [defaultPlayerSelection[2]],
       player4Id: [defaultPlayerSelection[3]],
-      p1: [250, [Validators.required, Validators.min(0)]],
-      p2: [250, [Validators.required, Validators.min(0)]],
-      p3: [250, [Validators.required, Validators.min(0)]],
-      p4: [250, [Validators.required, Validators.min(0)]]
+      p1: [
+        '250',
+        [Validators.required, Validators.pattern(MahjongScoreSheet.SIGNED_INTEGER_PATTERN)],
+      ],
+      p2: [
+        '250',
+        [Validators.required, Validators.pattern(MahjongScoreSheet.SIGNED_INTEGER_PATTERN)],
+      ],
+      p3: [
+        '250',
+        [Validators.required, Validators.pattern(MahjongScoreSheet.SIGNED_INTEGER_PATTERN)],
+      ],
+      p4: [
+        '250',
+        [Validators.required, Validators.pattern(MahjongScoreSheet.SIGNED_INTEGER_PATTERN)],
+      ],
     });
 
     const initial = this.form.getRawValue();
@@ -305,15 +348,15 @@ export class MahjongScoreSheet {
       initial.player1Id,
       initial.player2Id,
       initial.player3Id,
-      initial.player4Id
+      initial.player4Id,
     ];
 
     this.values = toSignal(
       this.form.valueChanges.pipe(
         startWith(this.form.getRawValue()),
-        map(() => this.form.getRawValue())
+        map(() => this.form.getRawValue()),
       ),
-      { initialValue: this.form.getRawValue() }
+      { initialValue: this.form.getRawValue() },
     );
 
     effect(() => {
@@ -357,13 +400,12 @@ export class MahjongScoreSheet {
     effect(() => {
       this.playerSyncToken();
       const inputPlayers = this.registeredPlayersInput();
-      const refreshedPlayers = inputPlayers.length >= 4
-        ? inputPlayers
-        : this.loadPlayersFromStorage();
+      const refreshedPlayers =
+        inputPlayers.length >= 4 ? inputPlayers : this.loadPlayersFromStorage();
       this.registeredPlayers.set(refreshedPlayers);
 
       const defaults = this.createDefaultPlayerSelection(
-        refreshedPlayers.map((player) => player.id)
+        refreshedPlayers.map((player) => player.id),
       );
       const current = this.form.getRawValue();
 
@@ -390,7 +432,7 @@ export class MahjongScoreSheet {
           current.player1Id,
           current.player2Id,
           current.player3Id,
-          current.player4Id
+          current.player4Id,
         ];
         return;
       }
@@ -399,15 +441,10 @@ export class MahjongScoreSheet {
         player1Id: nextPlayer1,
         player2Id: nextPlayer2,
         player3Id: nextPlayer3,
-        player4Id: nextPlayer4
+        player4Id: nextPlayer4,
       });
 
-      this.lastSelectedPlayerIds = [
-        nextPlayer1,
-        nextPlayer2,
-        nextPlayer3,
-        nextPlayer4
-      ];
+      this.lastSelectedPlayerIds = [nextPlayer1, nextPlayer2, nextPlayer3, nextPlayer4];
     });
   }
 
@@ -437,11 +474,11 @@ export class MahjongScoreSheet {
     }
 
     const targetIndex = previous.findIndex(
-      (playerId, index) => index !== seatIndex && playerId === selectedPlayerId
+      (playerId, index) => index !== seatIndex && playerId === selectedPlayerId,
     );
 
     const updates: Partial<Record<(typeof seatKeys)[number], string>> = {
-      [sourceKey]: selectedPlayerId
+      [sourceKey]: selectedPlayerId,
     };
 
     if (targetIndex !== -1) {
@@ -456,7 +493,7 @@ export class MahjongScoreSheet {
       current.player1Id,
       current.player2Id,
       current.player3Id,
-      current.player4Id
+      current.player4Id,
     ];
   }
 
@@ -511,18 +548,18 @@ export class MahjongScoreSheet {
       }
 
       const restored = parsed
-        .filter((item): item is Partial<RegisteredPlayer> =>
-          typeof item === 'object' && item !== null
+        .filter(
+          (item): item is Partial<RegisteredPlayer> => typeof item === 'object' && item !== null,
         )
         .map((item) => ({
           id: typeof item.id === 'string' ? item.id : '',
-          name: typeof item.name === 'string' ? item.name : ''
+          name: typeof item.name === 'string' ? item.name : '',
         }))
         .filter((item) => /^p[1-8]$/.test(item.id))
         .slice(0, MahjongScoreSheet.MAX_PLAYERS)
         .map((item) => ({
           id: item.id,
-          name: item.name.slice(0, 7)
+          name: item.name.slice(0, 7),
         }));
 
       const unique = new Map<string, RegisteredPlayer>();
@@ -532,8 +569,8 @@ export class MahjongScoreSheet {
         }
       }
 
-      const uniquePlayers = [...unique.values()].sort((a, b) =>
-        this.playerIdToNumber(a.id) - this.playerIdToNumber(b.id)
+      const uniquePlayers = [...unique.values()].sort(
+        (a, b) => this.playerIdToNumber(a.id) - this.playerIdToNumber(b.id),
       );
 
       if (uniquePlayers.length < 4) {
@@ -551,7 +588,7 @@ export class MahjongScoreSheet {
       { id: 'p1', name: 'プレーヤー1' },
       { id: 'p2', name: 'プレーヤー2' },
       { id: 'p3', name: 'プレーヤー3' },
-      { id: 'p4', name: 'プレーヤー4' }
+      { id: 'p4', name: 'プレーヤー4' },
     ];
   }
 
@@ -561,10 +598,10 @@ export class MahjongScoreSheet {
 
   private resetScoresOnly(): void {
     this.form.patchValue({
-      p1: 250,
-      p2: 250,
-      p3: 250,
-      p4: 250
+      p1: '250',
+      p2: '250',
+      p3: '250',
+      p4: '250',
     });
 
     this.form.controls.p1.markAsPristine();
@@ -578,7 +615,7 @@ export class MahjongScoreSheet {
       this.form.controls.p1,
       this.form.controls.p2,
       this.form.controls.p3,
-      this.form.controls.p4
+      this.form.controls.p4,
     ];
 
     const dirtyControls = controls.filter((control) => control.dirty);
@@ -591,15 +628,34 @@ export class MahjongScoreSheet {
       return;
     }
 
-    const dirtySum = dirtyControls.reduce((sum, control) => sum + control.value, 0);
-    const autoValue = MahjongScoreSheet.TOTAL_INPUT_UNIT - dirtySum;
-    const targetControl = pristineControls[0];
-
-    if (targetControl.value === autoValue) {
+    const parsedDirtyScores = dirtyControls.map((control) =>
+      this.parseSignedInteger(control.value),
+    );
+    const dirtyScores = parsedDirtyScores.filter((score): score is number => score !== null);
+    if (dirtyScores.length !== parsedDirtyScores.length) {
       return;
     }
 
-    targetControl.setValue(autoValue);
+    const dirtySum = dirtyScores.reduce((sum, score) => sum + score, 0);
+    const autoValue = MahjongScoreSheet.TOTAL_INPUT_UNIT - dirtySum;
+    const targetControl = pristineControls[0];
+    const nextValue = `${autoValue}`;
+
+    if (targetControl.value === nextValue) {
+      return;
+    }
+
+    targetControl.setValue(nextValue);
+  }
+
+  private parseSignedInteger(value: string): number | null {
+    const trimmed = value.trim();
+    if (!MahjongScoreSheet.SIGNED_INTEGER_PATTERN.test(trimmed)) {
+      return null;
+    }
+
+    const parsed = Number.parseInt(trimmed, 10);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   private loadSavedSettings(): SavedSettings | null {
@@ -609,24 +665,16 @@ export class MahjongScoreSheet {
     }
 
     try {
-      const raw = localStorageRef.getItem(
-        MahjongScoreSheet.SETTINGS_STORAGE_KEY
-      );
+      const raw = localStorageRef.getItem(MahjongScoreSheet.SETTINGS_STORAGE_KEY);
 
       if (!raw) {
         return null;
       }
 
       const parsed = JSON.parse(raw) as Partial<SavedSettings>;
-      const isUmaValid = this.umaPresets.some(
-        (preset) => preset.id === parsed.umaPreset
-      );
-      const isOkaValid = this.okaPresets.some(
-        (preset) => preset.id === parsed.okaPreset
-      );
-      const isTieModeValid = this.tieModePresets.some(
-        (preset) => preset.id === parsed.tieMode
-      );
+      const isUmaValid = this.umaPresets.some((preset) => preset.id === parsed.umaPreset);
+      const isOkaValid = this.okaPresets.some((preset) => preset.id === parsed.okaPreset);
+      const isTieModeValid = this.tieModePresets.some((preset) => preset.id === parsed.tieMode);
 
       if (!isUmaValid || !isOkaValid || !isTieModeValid) {
         return null;
@@ -635,7 +683,7 @@ export class MahjongScoreSheet {
       return {
         umaPreset: parsed.umaPreset ?? '10-20',
         okaPreset: parsed.okaPreset ?? '20',
-        tieMode: parsed.tieMode ?? 'dealer-priority'
+        tieMode: parsed.tieMode ?? 'dealer-priority',
       };
     } catch {
       return null;
@@ -649,10 +697,7 @@ export class MahjongScoreSheet {
     }
 
     try {
-      localStorageRef.setItem(
-        MahjongScoreSheet.SETTINGS_STORAGE_KEY,
-        JSON.stringify(settings)
-      );
+      localStorageRef.setItem(MahjongScoreSheet.SETTINGS_STORAGE_KEY, JSON.stringify(settings));
     } catch {
       // Ignore write failures (e.g. private mode/quota exceeded).
     }
