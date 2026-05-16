@@ -98,6 +98,10 @@ export class MahjongScoreSheet {
     { id: 'split', label: '折半' },
   ];
 
+  protected readonly contextMenuVisible = signal(false);
+  protected readonly contextMenuPosition = signal({ x: 0, y: 0 });
+  protected readonly contextMenuSeat = signal<1 | 2 | 3 | 4 | null>(null);
+
   protected readonly form;
   protected readonly values;
   readonly totalChange = output<number>();
@@ -454,6 +458,78 @@ export class MahjongScoreSheet {
 
   protected formatBasePoint(value: number): string {
     return value.toFixed(1);
+  }
+
+  protected onScoreContextMenu(seat: 1 | 2 | 3 | 4, event: MouseEvent): void {
+    event.preventDefault();
+    this.contextMenuSeat.set(seat);
+    this.contextMenuPosition.set({ x: event.clientX, y: event.clientY });
+    this.contextMenuVisible.set(true);
+  }
+
+  protected closeContextMenu(): void {
+    this.contextMenuVisible.set(false);
+    this.contextMenuSeat.set(null);
+  }
+
+  protected makeNegative(seat: 1 | 2 | 3 | 4): void {
+    const controlName = `p${seat}` as const;
+    const control = this.form.get(controlName);
+    if (!control) return;
+
+    const currentValue = control.value;
+    const parsed = this.parseSignedInteger(currentValue);
+
+    if (parsed !== null) {
+      control.setValue(`${-parsed}`);
+      if (!control.dirty) {
+        control.markAsDirty();
+      }
+    }
+
+    this.closeContextMenu();
+  }
+
+  protected adjustToMatchTotal(seat: 1 | 2 | 3 | 4): void {
+    const seatNumbers = [1, 2, 3, 4] as const;
+    const otherSeats = seatNumbers.filter((s) => s !== seat) as [1 | 2 | 3 | 4, 1 | 2 | 3 | 4, 1 | 2 | 3 | 4];
+
+    let otherSum = 0;
+    let hasInvalidValue = false;
+
+    for (const otherSeat of otherSeats) {
+      const controlName = `p${otherSeat}` as const;
+      const control = this.form.get(controlName);
+      if (!control) {
+        hasInvalidValue = true;
+        break;
+      }
+
+      const parsed = this.parseSignedInteger(control.value);
+      if (parsed === null) {
+        hasInvalidValue = true;
+        break;
+      }
+
+      otherSum += parsed;
+    }
+
+    if (hasInvalidValue) {
+      this.closeContextMenu();
+      return;
+    }
+
+    const targetValue = MahjongScoreSheet.TOTAL_INPUT_UNIT - otherSum;
+    const targetControlName = `p${seat}` as const;
+    const targetControl = this.form.get(targetControlName);
+    if (targetControl) {
+      targetControl.setValue(`${targetValue}`);
+      if (!targetControl.dirty) {
+        targetControl.markAsDirty();
+      }
+    }
+
+    this.closeContextMenu();
   }
 
   protected onPlayerSeatChange(seat: 1 | 2 | 3 | 4, event: Event): void {
